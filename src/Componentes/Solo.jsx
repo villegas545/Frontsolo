@@ -1,40 +1,52 @@
 import React from 'react'
 import axios from 'axios'
+import shortid from 'shortid';
 function Solo() {
-    const [todo, setTodo] = React.useState('')
+    //ESTADOS
+    const [title, setTitle] = React.useState('')
+    const [description, setDescription] = React.useState('')
+    const [completed, setCompleted] = React.useState("")
     const [todos, setTodos] = React.useState([])
     const [error, setError] = React.useState(null)
     const [modoEdicion, setModoEdicion] = React.useState(false)
     const [id, setId] = React.useState('')
+    //CONSTANTES
+    const url = 'http://localhost:3001/api/todos'
     //PARA QUE LA PAGINA AL CARGAR, CARGUE EL CRUD
     React.useEffect(() => {
         actualizarRegistros();
     }, [])
 
-    //ACTUALIZAR LAS TAREAS
+    //ACTUALIZAR LAS REGISTROS
     const actualizarRegistros = async () => {
-        let lasTareas = await axios.get(`http://localhost:3002/tarea`);
+        let lasTareas = await axios.get(url);
         setTodos(lasTareas.data);
     }
 
     //CAMBIAR ESTADO
     const editar = (item) => {
         setModoEdicion(true)
-        setTodo(item.nombreTarea);
+        setTitle(item.title);
+        setDescription(item.description);
+        setCompleted(item.completed);
         setId(item.id)
     }
 
-    //FUNCION PARA AGREGAR TAREA
+    //FUNCION PARA AGREGAR REGISTROS
     const agregarRegistro = async e => {
         e.preventDefault()
         try {
-            if (!todo.trim()) {
-                setError(true);
-                return
+            let enviar = {
+                id: shortid.generate(),
+                title,
+                description,
+                completed
             }
-            await axios.post(`http://localhost:3002/tarea`, { nombreTarea: todo });
+            await axios.post(url, { ...enviar });
             console.log("success");
-            setTodo("");
+            setTitle("");
+            setDescription("");
+            setCompleted("");
             actualizarRegistros();
             setError(false);
         } catch (error) {
@@ -42,10 +54,10 @@ function Solo() {
         }
     }
 
-    //FUNCION PARA ELIMINAR LA TAREA
+    //FUNCION PARA ELIMINAR LOS REGISTROS
     const eliminarRegistro = async (id) => {
         try {
-            await axios.delete(`http://localhost:3002/tarea/${id}`);
+            await axios.delete(`${url}/${id}`);
             console.log("success");
             actualizarRegistros();
         } catch (error) {
@@ -54,17 +66,20 @@ function Solo() {
 
     }
 
-    //FUCION PARA EDITAR LA TAREA
+    //FUCION PARA EDITAR LOS REGISTROS
     const editarRegistro = async (e) => {
         e.preventDefault()
         try {
-            if (!todo.trim()) {
-                setError(true);
-                return
+            let enviar = {
+                title,
+                description,
+                completed
             }
-            await axios.put(`http://localhost:3002/tarea/${id}`, { nombreTarea: todo });
+            await axios.put(`${url}/${id}`, { ...enviar });
             actualizarRegistros();
-            setTodo("");
+            setTitle("");
+            setDescription("");
+            setCompleted("");
             setModoEdicion(false);
             setError(false);
         } catch (error) {
@@ -81,38 +96,58 @@ function Solo() {
             <div className="row">
                 <div className="col-8">
                     <h4 className="text-center">Lista de registros</h4>
-                    <ul className="list-group">
-                        {
 
-                            todos.length === 0 ? (
+                    {
+
+                        todos.length === 0 ? (
+                            <ul className="list-group">
                                 <li className="list-group-item">No hay registros</li>
-                            ) : (
-                                todos.map(item => (
-                                    <li className="list-group-item" key={item.id}>
-                                        <span className="lead">{item.nombreTarea}</span>
+                            </ul>
+                        ) : (
+                            <div>
+                                <table className="table table-dark">
+                                    <thead>
+                                        <tr>
+                                            <th>Id</th>
+                                            <th>Title</th>
+                                            <th>Description</th>
+                                            <th>Completed</th>
+                                            <th>Update</th>
+                                            <th>Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {todos.map(item => (
+                                            <tr>
+                                                <td>{item.id}</td>
+                                                <td>{item.title}</td>
+                                                <td>{item.description}</td>
+                                                <td>{item.completed ? 'True' : 'False'}</td>
+                                                <td> <button
+                                                    className="btn btn-warning btn-sm float-right"
+                                                    onClick={() => editar(item)}
+                                                >
+                                                    Editar
+                                                </button></td>
+                                                <td> <button
+                                                    className="btn btn-danger btn-sm float-right mx-2"
+                                                    onClick={() => eliminarRegistro(item.id)}
+                                                >
+                                                    Eliminar
+                                                </button></td>
+                                            </tr>
+                                        ))
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                        <button
-                                            className="btn btn-danger btn-sm float-right mx-2"
-                                            onClick={() => eliminarRegistro(item.id)}
-                                        >
-                                            Eliminar
-                                        </button>
+                        )
 
-                                        <button
-                                            className="btn btn-warning btn-sm float-right"
-                                            onClick={() => editar(item)}
-                                        >
-                                            Editar
-                                        </button>
-
-                                    </li>
-                                ))
-                            )
-
-                        }
+                    }
 
 
-                    </ul>
+
                 </div>
                 <div className="col-4">
                     <h4 className="text-center">
@@ -125,15 +160,27 @@ function Solo() {
                         {
                             error ? <span className="text-danger">{error}</span> : null
                         }
-
                         <input
                             type="text"
                             className="form-control mb-2"
-                            placeholder="Ingrese Tarea"
-                            onChange={e => setTodo(e.target.value)}
-                            value={todo}
+                            placeholder="Title"
+                            onChange={e => setTitle(e.target.value)}
+                            value={title}
                         />
-
+                        <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Description"
+                            onChange={e => setDescription(e.target.value)}
+                            value={description}
+                        />
+                        <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Completed"
+                            onChange={e => setCompleted(e.target.value)}
+                            value={completed}
+                        />
                         {
                             modoEdicion ? (
                                 <button className="btn btn-warning btn-block" type="submit">Editar</button>
